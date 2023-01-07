@@ -41,23 +41,13 @@ std::string PerformLookup(std::string ip, std::string path) {
     while (std::getline(databaseFile, line)) {
         std::vector<std::string> result = DatabaseLine(line);
 
-        std::string column0 = result[0];
-        std::string column1 = result[1];
-        column0.erase(std::remove(column0.begin(), column0.end(), '"'), column0.end());
-        column1.erase(std::remove(column1.begin(), column1.end(), '"'), column1.end());
-
         struct in_addr addressStart;
         struct in_addr addressEnd;
-        addressStart.s_addr = std::stol(column0.c_str());
-        addressEnd.s_addr = std::stol(column1.c_str());
+        addressStart.s_addr = std::stol(result[0].c_str());
+        addressEnd.s_addr = std::stol(result[1].c_str());
 
         if ((address >= addressStart.s_addr) && (address <= addressEnd.s_addr)) {
-            std::string column3 = result[2];
-            std::string column6 = result[5];
-            column3.erase(std::remove(column3.begin(), column3.end(), '"'), column3.end());
-            column6.erase(std::remove(column6.begin(), column6.end(), '"'), column6.end());
-
-            return column3 + std::string(",") + column6;
+            return result[2] + std::string(",") + result[5];
         }
     }
 
