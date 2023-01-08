@@ -1,0 +1,1 @@
+#define DB_RECORD_SIZE 40

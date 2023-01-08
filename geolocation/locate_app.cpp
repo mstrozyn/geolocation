@@ -1,25 +1,31 @@
 #include <vector>
 #include <iostream>
+#include <fstream>
 
 #include <byteswap.h>
 #include <arpa/inet.h>
 
 #include "csv.h"
+#include "definitions.h"
 
-using Database = std::vector<std::string>;
 using Index = std::vector<uint32_t>;
 
-void LoadDatabase(std::string path, Database& data, Index& dataIndex) {
-    io::CSVReader<3> in(path);
-    std::string column1, column2, column3;
+void LoadDatabase(std::fstream& databaseFile, Index& dataIndex) {
+    uint32_t ip;
+    int index = 1;
 
-    while (in.read_row(column1, column2, column3)) {
-        dataIndex.push_back(std::stol(column1));
-        data.push_back(column2 + std::string(",") + column3);
+    while (databaseFile.good()) {
+        databaseFile.read((char *)&ip, sizeof(uint32_t));
+        dataIndex.push_back(ip);
+        databaseFile.seekg(index * DB_RECORD_SIZE);
+        index++;
     }
+
+    databaseFile.clear();
+    databaseFile.seekg(0);
 }
 
-std::string PerformLookup(std::string ip, const Database& database, const Index& index) {
+std::string PerformLookup(std::string ip, std::fstream& databaseFile, const Index& index) {
     struct in_addr ip_addr;
     inet_aton(ip.c_str(), &ip_addr);
     long address = bswap_32(ip_addr.s_addr);
@@ -27,10 +33,12 @@ std::string PerformLookup(std::string ip, const Database& database, const Index&
     auto upper = std::upper_bound(index.begin(), index.end(), address);
     upper--;
 
-    std::string result = database[std::distance(index.begin(), upper)];
-    result.erase(std::remove(result.begin(), result.end(), '"'), result.end());
+    int record = std::distance(index.begin(), upper);
+    char data[DB_RECORD_SIZE - sizeof(uint32_t)];
+    databaseFile.seekg((record * DB_RECORD_SIZE) + sizeof(uint32_t));
+    databaseFile.read((char *)data, sizeof(data));
 
-    return result;
+    return std::string(data);
 }
 
 int main(int argc, char** argv) {
@@ -39,18 +47,19 @@ int main(int argc, char** argv) {
         return EXIT_FAILURE;
     }
 
-    // app ready
     std::cout << "READY" << std::endl;
 
     Index index;
-    index.reserve(2942966);
-    Database database;
-    database.reserve(2942966);
     bool databaseLoaded = false;
+    std::string filePath(std::string(argv[1]) + ".bin");
+    std::fstream databaseFile(filePath, std::ios::in | std::ios::binary);
+    if (!databaseFile) {
+        std::cerr << "error: Can't open database file:" << filePath << std::endl;
+    }
 
     for (std::string cmd; std::getline(std::cin, cmd);) {
         if (cmd.find("LOAD") == 0) {
-            LoadDatabase(argv[1], database, index);
+            LoadDatabase(databaseFile, index);
             databaseLoaded = true;
             std::cout << "OK" << std::endl;
         } else if (cmd.find("LOOKUP") == 0) {
@@ -58,11 +67,17 @@ int main(int argc, char** argv) {
                 std::cerr << "error: Lookup requested before database and index was ever loaded" << std::endl;
                 return EXIT_FAILURE;
             }
-            std::cout << PerformLookup(cmd.substr(7), database, index) << std::endl;
+            std::cout << PerformLookup(cmd.substr(7), databaseFile, index) << std::endl;
         } else if (cmd.find("EXIT") == 0) {
             std::cout << "OK" << std::endl;
+            if (databaseLoaded) {
+                databaseFile.close();
+            }
             return EXIT_SUCCESS;
         } else {
+            if (databaseLoaded) {
+                databaseFile.close();
+            }
             std::cerr << "error: Unknown command received" << std::endl;
             return EXIT_FAILURE;
         }

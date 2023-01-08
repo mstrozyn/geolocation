@@ -1,6 +1,7 @@
-# cross-platform geolocation lookup application
+# geolocation lookup application
+# tested on ubuntu 20.04
 
-## Build
+## Build the "prepare" and "locate" command line tools:
 Make build directory:
 ```
 mkdir out
@@ -17,16 +18,22 @@ make
 
 ```
 
+## Prepare the database
+Preprocess the database into binary format:
+```
+./prepare ../geolocation/database.csv
+```
+
 ## Run the program
 ```
 cd out
-./Sample_app ../geolocation/database.csv
+./locate ../geolocation/database.csv
 
 ```
 
 ## Run the tests
 ```
 cd geolocation
-./geolocation_test.py --executable ../out/Sample_app --database database.csv
+./geolocation_test.py --executable ../out/locate --database ../geolocation/database.csv
 
 ```
