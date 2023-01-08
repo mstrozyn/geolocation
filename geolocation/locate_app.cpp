@@ -1,57 +1,36 @@
-#include <chrono>
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <thread>
 #include <vector>
-#include <optional>
-#include <arpa/inet.h>
-#include <algorithm>
+#include <iostream>
+
 #include <byteswap.h>
+#include <arpa/inet.h>
 
-using Database = std::vector<char>;
+#include "csv.h"
 
-Database LoadDatabase() {
-    return Database();
+using Database = std::vector<std::string>;
+using Index = std::vector<uint32_t>;
+
+void LoadDatabase(std::string path, Database& data, Index& dataIndex) {
+    io::CSVReader<3> in(path);
+    std::string column1, column2, column3;
+
+    while (in.read_row(column1, column2, column3)) {
+        dataIndex.push_back(std::stol(column1));
+        data.push_back(column2 + std::string(",") + column3);
+    }
 }
 
-std::vector<std::string> DatabaseLine(std::string line) {
-    std::string cell;
-    std::stringstream lineStream(line);
-    std::vector<std::string> result;
-
-    while (std::getline(lineStream, cell, ',')) {
-        result.push_back(cell);
-    }
-
-    return result;
-}
-
-std::string PerformLookup(std::string ip, std::string path) {
-    std::ifstream databaseFile(path);
-    if (!databaseFile) {
-        std::cerr << "error: Can't open database file:" << path << std::endl;
-    }
-
+std::string PerformLookup(std::string ip, const Database& database, const Index& index) {
     struct in_addr ip_addr;
     inet_aton(ip.c_str(), &ip_addr);
     long address = bswap_32(ip_addr.s_addr);
 
-    std::string line;
-    while (std::getline(databaseFile, line)) {
-        std::vector<std::string> result = DatabaseLine(line);
+    auto upper = std::upper_bound(index.begin(), index.end(), address);
+    upper--;
 
-        struct in_addr addressStart;
-        struct in_addr addressEnd;
-        addressStart.s_addr = std::stol(result[0].c_str());
-        addressEnd.s_addr = std::stol(result[1].c_str());
+    std::string result = database[std::distance(index.begin(), upper)];
+    result.erase(std::remove(result.begin(), result.end(), '"'), result.end());
 
-        if ((address >= addressStart.s_addr) && (address <= addressEnd.s_addr)) {
-            return result[2] + std::string(",") + result[5];
-        }
-    }
-
-    return std::string();
+    return result;
 }
 
 int main(int argc, char** argv) {
@@ -60,20 +39,26 @@ int main(int argc, char** argv) {
         return EXIT_FAILURE;
     }
 
-    // Indicate that the app is ready
+    // app ready
     std::cout << "READY" << std::endl;
 
-    std::optional<Database> database;
+    Index index;
+    index.reserve(2942966);
+    Database database;
+    database.reserve(2942966);
+    bool databaseLoaded = false;
+
     for (std::string cmd; std::getline(std::cin, cmd);) {
         if (cmd.find("LOAD") == 0) {
-            database = LoadDatabase();
+            LoadDatabase(argv[1], database, index);
+            databaseLoaded = true;
             std::cout << "OK" << std::endl;
         } else if (cmd.find("LOOKUP") == 0) {
-            if (!database.has_value()) {
-                std::cerr << "error: Lookup requested before database was ever loaded" << std::endl;
+            if (!databaseLoaded) {
+                std::cerr << "error: Lookup requested before database and index was ever loaded" << std::endl;
                 return EXIT_FAILURE;
             }
-            std::cout << PerformLookup(cmd.substr(7), argv[1]) << std::endl;
+            std::cout << PerformLookup(cmd.substr(7), database, index) << std::endl;
         } else if (cmd.find("EXIT") == 0) {
             std::cout << "OK" << std::endl;
             return EXIT_SUCCESS;
