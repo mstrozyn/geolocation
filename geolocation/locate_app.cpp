@@ -11,17 +11,17 @@ using Index = std::vector<uint32_t>;
 
 void LoadDatabase(std::fstream& databaseFile, Index& dataIndex) {
     uint32_t ip;
-    int index = 1;
+    int index = 0;
 
-    while (databaseFile.good()) {
+    while (index < NR_OF_RECORDS) {
         databaseFile.read((char *)&ip, sizeof(uint32_t));
         dataIndex.push_back(ip);
-        databaseFile.seekg(index * DB_RECORD_SIZE);
         index++;
     }
 
     databaseFile.clear();
-    databaseFile.seekg(0);
+    uint32_t offset = NR_OF_RECORDS * sizeof(uint32_t) + ((DB_RECORD_SIZE / 2) * (DB_RECORD_SIZE - sizeof(uint32_t)));
+    databaseFile.seekg(offset);
 }
 
 std::string PerformLookup(std::string ip, std::fstream& databaseFile, const Index& index) {
@@ -31,8 +31,12 @@ std::string PerformLookup(std::string ip, std::fstream& databaseFile, const Inde
 
     int record = std::distance(index.begin(), upper);
     char data[DB_RECORD_SIZE - sizeof(uint32_t)];
-    databaseFile.seekg((record * DB_RECORD_SIZE) + sizeof(uint32_t));
+    uint32_t offset = NR_OF_RECORDS * sizeof(uint32_t) + (record * (DB_RECORD_SIZE - sizeof(uint32_t)));
+    databaseFile.seekg(offset);
     databaseFile.read((char *)data, sizeof(data));
+
+    offset = NR_OF_RECORDS * sizeof(uint32_t) + ((DB_RECORD_SIZE / 2) * (DB_RECORD_SIZE - sizeof(uint32_t)));
+    databaseFile.seekg(offset);
 
     return std::string(data);
 }
@@ -46,6 +50,7 @@ int main(int argc, char** argv) {
     std::cout << "READY" << std::endl;
 
     Index index;
+    index.reserve(NR_OF_RECORDS);
     bool databaseLoaded = false;
     std::string filePath(std::string(argv[1]) + ".bin");
     std::fstream databaseFile(filePath, std::ios::in | std::ios::binary);
