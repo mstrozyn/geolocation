@@ -11,12 +11,16 @@ void PrepareDatabase(std::string path) {
     std::string filePath(path + ".bin");
     std::fstream databaseFile(filePath, std::ios::out | std::ios::binary);
     if (!databaseFile) {
-        std::cerr << "error: Can't create database file:" << filePath << std::endl;
+        std::cerr << "error: can't create database file:" << filePath << std::endl;
     }
+
+    uint32_t rowCount = 0;
+    databaseFile.write((const char *)&rowCount, sizeof(uint32_t));
 
     while (ipReader.read_row(column1, column2, column3, column4, column5, column6, column7, column8)) {
         uint32_t ip = std::stol(column1);
         databaseFile.write((const char *)&ip, sizeof(uint32_t));
+        rowCount++;
     }
 
     io::CSVReader<8, io::trim_chars<' '>, io::double_quote_escape<',','\"'> > recordReader(path);
@@ -24,6 +28,9 @@ void PrepareDatabase(std::string path) {
         std::string location = column3 + std::string(",") + column6;
         databaseFile.write(location.c_str(), DB_RECORD_SIZE - sizeof(uint32_t));
     }
+
+    databaseFile.seekg(0);
+    databaseFile.write((const char *)&rowCount, DB_RECORD_COUNT_SIZE);
 
     databaseFile.close();
 }

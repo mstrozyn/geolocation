@@ -1,2 +1,2 @@
 #define DB_RECORD_SIZE 40
-#define NR_OF_RECORDS 2942966
+#define DB_RECORD_COUNT_SIZE sizeof(uint32_t)
