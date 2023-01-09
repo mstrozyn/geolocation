@@ -1,47 +1,50 @@
-#include <vector>
 #include <iostream>
-#include <fstream>
 
 #include <arpa/inet.h>
 #include <sys/mman.h>
+#include <unistd.h>
 #include <fcntl.h>
 
 #include "csv.h"
 #include "definitions.h"
 
-using Index = std::vector<uint32_t>;
-
-uint32_t* LoadDatabase(std::string filePath) {
+unsigned char* LoadDatabase(std::string filePath) {
     int fd = open(filePath.c_str(), O_RDONLY);
     if (fd == -1) {
-        std::cerr << "error: Can't open database file:" << filePath << std::endl;
-        return NULL;
+        std::cerr << "error: can't open database file:" << filePath << std::endl;
+        return 0;
     }
 
-    uint32_t* index = (uint32_t*)mmap(NULL, NR_OF_RECORDS * sizeof(uint32_t), PROT_READ, MAP_PRIVATE, fd, 0);
-    if (index == MAP_FAILED) {
-        std::cerr << "error: Can't mmap database index:" << filePath << std::endl;
-        return NULL;
+    unsigned char* data = (unsigned char*)mmap(NULL, NR_OF_RECORDS * DB_RECORD_SIZE, PROT_READ, MAP_PRIVATE, fd, 0);
+    if (data == MAP_FAILED) {
+        std::cerr << "error: can't mmap database" << std::endl;
+        close(fd);
+        return 0;
     }
 
-    return index;
+    close(fd);
+
+    return data;
 }
 
-std::string PerformLookup(std::string ip, std::fstream& databaseFile, uint32_t* index) {
+void CloseDatabase(unsigned char* database) {
+    if (munmap(database, NR_OF_RECORDS * DB_RECORD_SIZE)) {
+        std::cerr << "error: can't mummap database" << std::endl;
+    }
+}
+
+std::string PerformLookup(std::string ip, uint32_t* data) {
     uint32_t address = inet_network(ip.c_str());
-    auto upper = std::upper_bound(index, index + NR_OF_RECORDS, address);
+    auto upper = std::upper_bound(data, data + NR_OF_RECORDS, address);
     upper--;
 
-    int record = std::distance(index, upper);
-    char data[DB_RECORD_SIZE - sizeof(uint32_t)];
+    int record = std::distance(data, upper);
+    char location[DB_RECORD_SIZE - sizeof(uint32_t)];
     uint32_t offset = NR_OF_RECORDS * sizeof(uint32_t) + (record * (DB_RECORD_SIZE - sizeof(uint32_t)));
-    databaseFile.seekg(offset);
-    databaseFile.read((char *)data, sizeof(data));
 
-    offset = NR_OF_RECORDS * sizeof(uint32_t) + ((DB_RECORD_SIZE / 2) * (DB_RECORD_SIZE - sizeof(uint32_t)));
-    databaseFile.seekg(offset);
+    memcpy(location, (unsigned char*)data + offset, sizeof(location));
 
-    return std::string(data);
+    return std::string(location);
 }
 
 int main(int argc, char** argv) {
@@ -52,37 +55,33 @@ int main(int argc, char** argv) {
 
     std::cout << "READY" << std::endl;
 
-    uint32_t* index = NULL;
-    std::string filePath(std::string(argv[1]) + ".bin");
-    std::fstream databaseFile(filePath, std::ios::in | std::ios::binary);
-    if (!databaseFile) {
-        std::cerr << "error: Can't open database file:" << filePath << std::endl;
-    }
+    unsigned char* data = 0;
+    int result = EXIT_SUCCESS;
 
     for (std::string cmd; std::getline(std::cin, cmd);) {
         if (cmd.find("LOAD") == 0) {
-            index = LoadDatabase(filePath.c_str());
+            std::string filePath(std::string(argv[1]) + ".bin");
+            data = LoadDatabase(filePath.c_str());
             std::cout << "OK" << std::endl;
         } else if (cmd.find("LOOKUP") == 0) {
-            if (!index) {
-                std::cerr << "error: Lookup requested before database and index was ever loaded" << std::endl;
-                return EXIT_FAILURE;
+            if (!data) {
+                std::cerr << "error: lookup requested before database and index was ever loaded" << std::endl;
+                result = EXIT_FAILURE;
+                break;
             }
-            std::cout << PerformLookup(cmd.substr(7), databaseFile, index) << std::endl;
+            std::cout << PerformLookup(cmd.substr(7), (uint32_t*)data) << std::endl;
         } else if (cmd.find("EXIT") == 0) {
             std::cout << "OK" << std::endl;
-            if (index) {
-                databaseFile.close();
-            }
-            return EXIT_SUCCESS;
+            result = EXIT_SUCCESS;
+            break;
         } else {
-            if (index) {
-                databaseFile.close();
-            }
-            std::cerr << "error: Unknown command received" << std::endl;
-            return EXIT_FAILURE;
+            std::cerr << "error: unknown command received" << std::endl;
+            result = EXIT_FAILURE;
+            break;
         }
     }
 
-    return EXIT_SUCCESS;
+    CloseDatabase(data);
+
+    return result;
 }
