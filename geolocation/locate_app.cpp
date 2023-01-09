@@ -10,14 +10,7 @@
 using Index = std::vector<uint32_t>;
 
 void LoadDatabase(std::fstream& databaseFile, Index& dataIndex) {
-    uint32_t ip;
-    int index = 0;
-
-    while (index < NR_OF_RECORDS) {
-        databaseFile.read((char *)&ip, sizeof(uint32_t));
-        dataIndex.push_back(ip);
-        index++;
-    }
+    databaseFile.read((char*)dataIndex.data(), NR_OF_RECORDS * sizeof(uint32_t));
 
     databaseFile.clear();
     uint32_t offset = NR_OF_RECORDS * sizeof(uint32_t) + ((DB_RECORD_SIZE / 2) * (DB_RECORD_SIZE - sizeof(uint32_t)));
@@ -50,7 +43,7 @@ int main(int argc, char** argv) {
     std::cout << "READY" << std::endl;
 
     Index index;
-    index.reserve(NR_OF_RECORDS);
+    index.resize(NR_OF_RECORDS);
     bool databaseLoaded = false;
     std::string filePath(std::string(argv[1]) + ".bin");
     std::fstream databaseFile(filePath, std::ios::in | std::ios::binary);
