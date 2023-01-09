@@ -2,7 +2,6 @@
 #include <iostream>
 #include <fstream>
 
-#include <byteswap.h>
 #include <arpa/inet.h>
 
 #include "csv.h"
@@ -26,10 +25,7 @@ void LoadDatabase(std::fstream& databaseFile, Index& dataIndex) {
 }
 
 std::string PerformLookup(std::string ip, std::fstream& databaseFile, const Index& index) {
-    struct in_addr ip_addr;
-    inet_aton(ip.c_str(), &ip_addr);
-    long address = bswap_32(ip_addr.s_addr);
-
+    uint32_t address = inet_network(ip.c_str());
     auto upper = std::upper_bound(index.begin(), index.end(), address);
     upper--;
 
