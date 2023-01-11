@@ -64,5 +64,9 @@ Final points for 10 measurements:  52.237044000000004
 ```
 In order to achieve best perfomance the "taskset" command is used to schedule execution on the specified cpu maximising the cache hit.
 ## Best score from 100 subsequent test runs:
+```
+cd geolocation
+./test.sh 100
+```
 ## Development and test environment:
 Developed and tested on ubuntu 20.04, 64 bit, Intel Core i3.
