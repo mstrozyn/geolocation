@@ -67,9 +67,9 @@ In order to achieve the best perfomance the "taskset" command is used to schedul
 ```
 cd geolocation
 ./test.sh 100
-min: 48.937819499999996
-max: 49.0805105
-avg: 48,71
+min: 47.2458545
+max: 52.6927515
+avg: 48,24
 ```
 ## Development and test environment:
 Developed and tested on ubuntu 20.04, 64 bit, Intel Core i3.
