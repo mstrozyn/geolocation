@@ -21,21 +21,21 @@ unzip database.zip
 cd ../out
 ./prepare ../geolocation/database.csv
 ```
-The "prepare" command preprocess the csv file in order to create database in binary format. The resulting database contains only needed records i.e. ip range start (csv column1), country code (csv column3) and the city (csv column6)). Preprocessing is done using https://github.com/ben-strasser/fast-cpp-csv-parser header only library.
+The "prepare" command preprocesses the csv file in order to create database in binary format. The resulting database contains only needed records i.e. ip range start (csv column 1), country code (csv column 3) and the city (csv column 6)). Preprocessing is done using https://github.com/ben-strasser/fast-cpp-csv-parser header only library for csv parsing.
 
-The format of the binary database is as follows:
+The binary format of the resulting database file is as follows:
 ```
 +--------------------------------------------------------+
 |                                                        |
-|             4 bytes (DB_COUNT_RECORD_SIZE)             | db size
+|             4 bytes (DB_COUNT_RECORD_SIZE)             | db_record_count
 |                                                        |
 +--------------------------------------------------------+
 |                                                        |
-|   (DB_COUNT_RECORD_SIZE * DB_INDEX_RECORD_SIZE) bytes  | db index (ip range start)
+|     (db_record_count * DB_INDEX_RECORD_SIZE) bytes     | db_index (ip range start)
 |                                                        |
 +--------------------------------------------------------+
 |                                                        |
-| (DB_COUNT_RECORD_SIZE * DB_LOCATION_RECORD_SIZE) bytes | db records (country code and city)
+|    (db_record_count * DB_LOCATION_RECORD_SIZE) byte    | db_records (country code and city)
 |                                                        |
 +--------------------------------------------------------+
 ```
@@ -44,8 +44,8 @@ The format of the binary database is as follows:
 cd out
 ./locate ../geolocation/database.csv
 ```
-The "locate" program maps the binary database file into process address space and all the search is done using pointer arithmetic. There is no separate data structures.
-## Run the tests on the specific cpu to improve the cache hit:
+The "locate" program maps the binary database file into process address space and all the search is done using pointer arithmetic. There is no additional data structure.
+## Run the tests on the specific cpu to improve the cache usage:
 ```
 cd geolocation
 taskset --cpu-list 1 ./geolocation_test.py --executable ../out/locate --database ../geolocation/database.csv
@@ -62,11 +62,14 @@ OK    5.44.16.0 GB Hastings Memory usage: 3.13mb Lookup time: 18μs
 OK    8.24.99.0 US Hastings Memory usage: 3.13mb Lookup time: 15μs
 Final points for 10 measurements:  52.237044000000004
 ```
-In order to achieve best perfomance the "taskset" command is used to schedule execution on the specified cpu maximising the cache hit.
-## Best score from 100 subsequent test runs:
+In order to achieve the best perfomance the "taskset" command is used to schedule execution on the specified cpu maximising the cache hit.
+## min/max/avg score from 100 subsequent test runs:
 ```
 cd geolocation
 ./test.sh 100
+min: 48.937819499999996
+max: 49.0805105
+avg: 48,71
 ```
 ## Development and test environment:
 Developed and tested on ubuntu 20.04, 64 bit, Intel Core i3.
