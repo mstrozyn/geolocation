@@ -31,11 +31,19 @@ The binary format of the resulting database file is as follows:
 |                                                        |
 +--------------------------------------------------------+
 |                                                        |
+|                                                        |
 |     (db_record_count * DB_INDEX_RECORD_SIZE) bytes     | db_index (ip range start)
+|                                                        |
 |                                                        |
 +--------------------------------------------------------+
 |                                                        |
-|    (db_record_count * DB_LOCATION_RECORD_SIZE) byte    | db_records (country code and city)
+|                                                        |
+|                                                        |
+|                                                        |
+|    (db_record_count * DB_LOCATION_RECORD_SIZE) bytes   | db_records (country code and city)
+|                                                        |
+|                                                        |
+|                                                        |
 |                                                        |
 +--------------------------------------------------------+
 ```
