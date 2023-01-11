@@ -31,7 +31,8 @@ unsigned char* LoadDatabase(std::string filePath, uint32_t& recordCount) {
     }
 
     // mmap complete db
-    data = (unsigned char*)mmap(NULL, DB_COUNT_RECORD_SIZE + recordCount * (DB_INDEX_RECORD_SIZE + DB_LOCATION_RECORD_SIZE), PROT_READ, MAP_PRIVATE, fd, 0);
+    data = (unsigned char*)mmap(NULL, DB_COUNT_RECORD_SIZE + recordCount * (DB_INDEX_RECORD_SIZE + DB_LOCATION_RECORD_SIZE)
+            , PROT_READ, MAP_PRIVATE, fd, 0);
     if (data == MAP_FAILED) {
         std::cerr << "error: can't mmap database" << std::endl;
         close(fd);
